@@ -36,14 +36,17 @@ namespace IntelliMedia
 	{
 		public SignInViewModel ViewModel { get { return (SignInViewModel)BindingContext; }}
 
+		public InputField groupField;
 		public InputField usernameField;
 		public InputField passwordField;
 
 		public override void OnHidden()
 		{
+			Contract.PropertyNotNull("groupField", groupField);
 			Contract.PropertyNotNull("usernameField", usernameField);
 			Contract.PropertyNotNull("passwordField", passwordField);
 
+			groupField.text = "";
 			usernameField.text = "";
 			passwordField.text = "";
 
@@ -52,7 +55,7 @@ namespace IntelliMedia
 
 		public void SignIn()
 		{
-			ViewModel.SignIn(usernameField.text, passwordField.text);
+			ViewModel.SignIn(groupField.text, usernameField.text, passwordField.text);
 		}
 	}
 }

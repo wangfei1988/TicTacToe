@@ -51,7 +51,7 @@ namespace IntelliMedia
 			this.courseSettingsService = courseSettingsService;
 		}
 
-		public void SignIn(string username, string password)
+		public void SignIn(string group, string username, string password)
 		{
 			try
 			{
@@ -73,7 +73,7 @@ namespace IntelliMedia
                 {
                     ProgressIndicatorViewModel.ProgressInfo busyIndicator = progressIndicatorViewModel.Begin("Signing in...");
                     // TODO rgtaylor 2015-12-10 Replace hardcoded 'domain'
-                    authenticator.SignIn("domain", username, password)
+                    authenticator.SignIn(group, username, password)
                     .ThenAs<Student>((Student student) =>
                     {
                         sessionState.Student = student;
