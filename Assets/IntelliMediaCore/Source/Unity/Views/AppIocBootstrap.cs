@@ -35,6 +35,7 @@ namespace IntelliMediaSample
 {
 	public class AppIocBootstrap : MonoInstaller
 	{
+		public bool StraightToContent;
 		public AlertView alertPrefab;
 		public ProgressIndicatorView progressIndicatorPrefab;
         public SignInView signInViewPrefab;
@@ -79,7 +80,14 @@ namespace IntelliMediaSample
             Container.Resolve<ViewFactory>().Register<SignInViewModel, SignInView>();
 			Container.Resolve<ViewFactory>().Register<MainMenuViewModel, MainMenuView>();
 
-			Container.Resolve<StageManager>().Reveal<SignInViewModel>();
+			if (StraightToContent)
+			{
+				Container.Resolve<StageManager>().Reveal<MetaTutorIVH.ContentViewModel>().Start();
+			}
+			else
+			{
+				Container.Resolve<StageManager>().Reveal<SignInViewModel>().Start();
+			}
 		}
 	}
 }

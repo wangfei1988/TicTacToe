@@ -33,8 +33,8 @@ namespace IntelliMedia
 {
 	public class ActivityViewModel : ViewModel
 	{
-		private StageManager navigator;
-		private ActivityService activityService;
+		protected StageManager navigator;
+		protected ActivityService activityService;
 
 		public Activity Activity { get; set; }
 		public ActivityState ActivityState { get; set; }
@@ -75,32 +75,33 @@ namespace IntelliMedia
 		protected void SaveActivityStateAndTransition<ToViewModel>()
 		{												
 			DebugLog.Info("Save state");
-            navigator.Reveal<ProgressIndicatorViewModel>().ThenAs<ProgressIndicatorViewModel>((ProgressIndicatorViewModel progressIndicatorViewModel) =>
-            {
+			navigator.Reveal<ProgressIndicatorViewModel>().Then((vm, onRevealed, onRevealError) =>
+			{
+				ProgressIndicatorViewModel progressIndicatorViewModel = vm.ResultAs<ProgressIndicatorViewModel>();
                 ProgressIndicatorViewModel.ProgressInfo busyIndicator = progressIndicatorViewModel.Begin("Saving...");
                 activityService.SaveActivityState(ActivityState)
-                    .ThenAs<ActivityState>((ActivityState activityState) =>
+					.Then((prevResult, onCompleted, onError) =>
                     {
                         navigator.Transition(this, typeof(ToViewModel));
-                        return true;
+						onCompleted(true);
                     })
                     .Catch((Exception e) =>
-                           {
-                               navigator.Reveal<AlertViewModel>(alert =>
-                                                            {
-                                                                alert.Title = "Unable to save";
-                                                                alert.Message = e.Message;
-                                                                alert.Error = e;
-                                                                alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
-                                                            });
+                    {
+                       navigator.Reveal<AlertViewModel>(alert =>
+	                    {
+	                        alert.Title = "Unable to save";
+	                        alert.Message = e.Message;
+	                        alert.Error = e;
+	                        alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
+						}).Start();
 
-                           }).Finally(() =>
-                                  {
-                                      busyIndicator.Dispose();
-                                  });
+                    }).Finally(() =>
+                    {
+                       busyIndicator.Dispose();
+					}).Start();
 
-                return true;
-            });
+				onRevealed(true);
+			}).Start();
 		}
 	}
 }

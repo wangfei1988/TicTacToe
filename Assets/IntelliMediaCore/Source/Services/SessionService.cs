@@ -39,39 +39,38 @@ namespace IntelliMedia
 			this.appSettings = appSettings;
 		}
 		
-		public Promise Start(string sessionId)
+		public AsyncTask Start(string sessionId)
 		{
-			Promise promise = new Promise();
-
-			try
+			return new AsyncTask((prevResult, onCompleted, onError) =>
 			{
-				Uri serverUri = new Uri(appSettings.ServerURI, UriKind.RelativeOrAbsolute);
-				Uri restUri = new Uri(serverUri, "rest/");
-
-				SessionRepository repo = new SessionRepository(restUri);
-				if (repo == null)
+				try
 				{
-					throw new Exception("SessionRepository is not initialized.");
+					Uri serverUri = new Uri(appSettings.ServerURI, UriKind.RelativeOrAbsolute);
+					Uri restUri = new Uri(serverUri, "rest/");
+
+					SessionRepository repo = new SessionRepository(restUri);
+					if (repo == null)
+					{
+						throw new Exception("SessionRepository is not initialized.");
+					}
+								
+					repo.GetByKey(sessionId, (response) =>
+					{
+						if (response.Success)
+						{
+							onCompleted(response.Item);
+						}
+						else
+						{
+							onError(new Exception(response.Error));
+						}
+					});                   
 				}
-							
-				repo.GetByKey(sessionId, (response) =>
+				catch (Exception e)
 				{
-					if (response.Success)
-					{
-						promise.Resolve(response.Item);
-					}
-					else
-					{
-						promise.Reject(new Exception(response.Error));
-					}
-				});                   
-			}
-			catch (Exception e)
-			{
-				promise.Reject(e);
-			}
-
-			return promise;
+					onError(e);
+				}
+			});
 		}
 	}
 }

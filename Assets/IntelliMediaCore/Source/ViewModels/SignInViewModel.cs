@@ -68,45 +68,50 @@ namespace IntelliMedia
 				sessionState.Student = null;
 				sessionState.Session = null;
 
-				DebugLog.Info("SignIn {0}", username);
-                navigator.Reveal<ProgressIndicatorViewModel>().ThenAs<ProgressIndicatorViewModel>((ProgressIndicatorViewModel progressIndicatorViewModel) =>
+				DebugLog.Info("SignIn {0}...", username);
+				navigator.Reveal<ProgressIndicatorViewModel>().Then((vm, onRevealed, onRevealError) =>
                 {
+					ProgressIndicatorViewModel progressIndicatorViewModel = vm.ResultAs<ProgressIndicatorViewModel>();
                     ProgressIndicatorViewModel.ProgressInfo busyIndicator = progressIndicatorViewModel.Begin("Signing in...");
                     // TODO rgtaylor 2015-12-10 Replace hardcoded 'domain'
                     authenticator.SignIn(group, username, password)
-                    .ThenAs<Student>((Student student) =>
-                    {
-                        sessionState.Student = student;
-                        return sessionService.Start(sessionState.Student.SessionGuid);
-                    })
-                    .ThenAs<Session>((Session session) =>
-                    {
-                        sessionState.Session = session;
-                        return courseSettingsService.LoadSettings(sessionState.Student.Id);
-                    })
-                    .ThenAs<CourseSettings>((CourseSettings settings) =>
-                    {
-                        sessionState.CourseSettings = settings;
-                        navigator.Transition(this, typeof(MainMenuViewModel));
-                        return true;
+						.Then((prevResult, onCompleted, onError) =>
+	                    {
+							DebugLog.Info("Signed in {0}", username);
+							sessionState.Student = prevResult.ResultAs<Student>();
+							sessionService.Start(sessionState.Student.SessionGuid).Start(onCompleted, onError);
+	                    })
+						.Then((prevResult, onCompleted, onError) =>
+	                    {
+							DebugLog.Info("Session started");
+							sessionState.Session = prevResult.ResultAs<Session>();
+							courseSettingsService.LoadSettings(sessionState.Student.Id).Start(onCompleted, onError);
+	                    })
+						.Then((prevResult, onCompleted, onError) =>
+	                    {
+							DebugLog.Info("Settings loaded");
+							sessionState.CourseSettings = prevResult.ResultAs<CourseSettings>();
+	                        navigator.Transition(this, typeof(MainMenuViewModel));
+							onCompleted(true);
 
-                    }).Catch((Exception e) =>
-                    {
-                        navigator.Reveal<AlertViewModel>(alert =>
-                        {
-                            alert.Title = "Unable to sign in";
-                            alert.Message = e.Message;
-                            alert.Error = e;
-                            alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
-                        });
+	                    }).Catch((Exception e) =>
+	                    {
+	                        navigator.Reveal<AlertViewModel>(alert =>
+	                        {
+	                            alert.Title = "Unable to sign in";
+	                            alert.Message = e.Message;
+	                            alert.Error = e;
+	                            alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
+	                        });
 
-                    }).Finally(() =>
-                    {
-                        busyIndicator.Dispose();
-                    });
+	                    }).Finally(() =>
+	                    {
+	                        busyIndicator.Dispose();
+						}).Start();
 
-                    return true;
-                });
+					onRevealed(true);
+
+				}).Start();
 			}
 			catch (Exception e)
 			{
@@ -115,7 +120,7 @@ namespace IntelliMedia
 					alert.Title = "Unable to sign in";
 					alert.Message = e.Message;
 					alert.Error = e;
-				});
+				}).Start();
 			}
 		}
 	}
