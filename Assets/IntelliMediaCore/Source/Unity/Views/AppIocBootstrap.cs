@@ -80,14 +80,8 @@ namespace IntelliMediaSample
             Container.Resolve<ViewFactory>().Register<SignInViewModel, SignInView>();
 			Container.Resolve<ViewFactory>().Register<MainMenuViewModel, MainMenuView>();
 
-			if (StraightToContent)
-			{
-				Container.Resolve<StageManager>().Reveal<MetaTutorIVH.ContentViewModel>().Start();
-			}
-			else
-			{
-				Container.Resolve<StageManager>().Reveal<SignInViewModel>().Start();
-			}
+			Container.Resolve<StageManager>().Reveal<SignInViewModel>().Start();
+
 		}
 	}
 }
