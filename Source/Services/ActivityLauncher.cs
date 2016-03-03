@@ -46,17 +46,12 @@ namespace IntelliMedia
 			this.viewModelFactory = viewModelFactory;
 		}
 		
-		public Promise Start(Student student, Activity activity, bool resetActivityState = false)
+		public AsyncTask Start(Student student, Activity activity, bool resetActivityState = false)
 		{
-			Promise promise = new Promise();
-
-			try
-			{
-				ActivityState activityState = null;
-
-				activityService.LoadActivityState(student.Id, activity.Id, true).ThenAs<ActivityState>((ActivityState state) =>
+			return activityService.LoadActivityState(student.Id, activity.Id, true)
+				.Then((prevResult, onCompleted, onError) =>
 				{
-					activityState = state;
+					ActivityState activityState = prevResult.ResultAs<ActivityState>();
 					if (resetActivityState || !activityState.CanResume)
 					{
 						// Generate a new trace ID for restarts or new games that don't have saved state
@@ -92,7 +87,7 @@ namespace IntelliMedia
 //						throw new Exception(String.Format("{0} has an unknown URI type: ", activity.Name, activity.Uri));
 //					}	
 
-					promise.Resolve(viewModelFactory.Resolve<ActivityViewModel>(Resolve(activity.Uri), vm =>
+					onCompleted(viewModelFactory.Resolve<ActivityViewModel>(Resolve(activity.Uri), vm =>
 					{
 						vm.Activity = activity;
 						vm.ActivityState = activityState;
@@ -104,20 +99,7 @@ namespace IntelliMedia
 //						web.Message = "Complete web viewer action for " + activity.Name;
 //						web.URL = "http://www.google.com";
 //					}));
-
-					return true;
-				})
-				.Catch((Exception e) => 
-				{
-					promise.Reject(e);
-				});                 
-			}
-			catch (Exception e)
-			{
-				promise.Reject(e);
-			}
-
-			return promise;
+				});
 		}
 
 		private void LaunchEpisode(ActivityState activityState, string activityName, string episodeUrn, bool restart = false)

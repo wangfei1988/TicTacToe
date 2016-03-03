@@ -49,7 +49,7 @@ namespace IntelliMedia
 		{
 			Hide(from, (IView view) =>
 			{
-				Reveal(to);
+				Reveal(to).Start();
 			});
 		}
 
@@ -58,30 +58,36 @@ namespace IntelliMedia
 			Transition(from, viewModelFactory.Resolve(toViewModelType));
 		}
 
-		public Promise Reveal(ViewModel vm, VisibilityEvent.OnceEventHandler handler = null)
+		public AsyncTask Reveal(ViewModel vm, VisibilityEvent.OnceEventHandler handler = null)
 		{
 			Contract.ArgumentNotNull("vm", vm);
 
-            Promise promise = new Promise();
-
-            DebugLog.Info("StageManager.Reveal: {0}", vm.GetType().Name);
-
-			IView view = revealedViews.FirstOrDefault(v => v.BindingContext == vm);
-			if (view == null)
+			return new AsyncTask((prevResult, onCompleted, onError) =>
 			{
-				view = viewFactory.Resolve(vm);
-				view.BindingContext = vm;
-				revealedViews.Add(view);
-				view.Reveal(false, (IView revealedView) =>
-                {
-                    promise.Resolve(revealedView.BindingContext);
-                });
-            }
-			
-			return promise;
+				try
+				{
+					DebugLog.Info("StageManager.Reveal: {0}", vm.GetType().Name);
+
+					IView view = revealedViews.FirstOrDefault(v => v.BindingContext == vm);
+					if (view == null)
+					{
+						view = viewFactory.Resolve(vm);
+						view.BindingContext = vm;
+						revealedViews.Add(view);
+						view.Reveal(false, (IView revealedView) =>
+		                {
+							onCompleted(revealedView.BindingContext);
+		                });
+		            }
+				}
+				catch(Exception e)
+				{
+					onError(e);
+				}
+			});
 		}
 
-		public Promise Reveal<TViewModel>(Action<TViewModel> setStateAction = null) where TViewModel : ViewModel
+		public AsyncTask Reveal<TViewModel>(Action<TViewModel> setStateAction = null) where TViewModel : ViewModel
 		{
 			TViewModel vm = viewModelFactory.Resolve<TViewModel>(setStateAction);
 

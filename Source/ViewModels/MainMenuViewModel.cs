@@ -81,39 +81,43 @@ namespace IntelliMedia
 			{
 				Contract.PropertyNotNull("sessionState.CourseSettings", sessionState.CourseSettings);
 				
-				DebugLog.Info("Load activities");
-                navigator.Reveal<ProgressIndicatorViewModel>().ThenAs<ProgressIndicatorViewModel>((ProgressIndicatorViewModel progressIndicatorViewModel) =>
-                {
+				DebugLog.Info("RefreshActivityList");
+				navigator.Reveal<ProgressIndicatorViewModel>().Then((vm, onRevealed, onRevealError) =>
+				{
+					ProgressIndicatorViewModel progressIndicatorViewModel = vm.ResultAs<ProgressIndicatorViewModel>();
                     ProgressIndicatorViewModel.ProgressInfo busyIndicator = progressIndicatorViewModel.Begin("Loading...");
                     activityService.LoadActivities(sessionState.CourseSettings.CourseId)
-                    .ThenAs<List<Activity>>((List<Activity> activities) =>
+					.Then((prevResult, onCompleted, onError) =>
                     {
-                        Activities = activities;
-                        IEnumerable<string> activityIds = activities.Select(a => a.Id);
-                        return activityService.LoadActivityStates(sessionState.Student.Id, activityIds);
+						DebugLog.Info("Activities loaded");	
+						Activities = prevResult.ResultAs<List<Activity>>();
+						IEnumerable<string> activityIds = Activities.Select(a => a.Id);
+						activityService.LoadActivityStates(sessionState.Student.Id, activityIds).Start(onCompleted, onError);
                     })
-                    .ThenAs<List<ActivityState>>((List<ActivityState> activityStates) =>
+					.Then((prevResult, onCompleted, onError) =>
                     {
-                        ActivityStates = activityStates;
-                        return true;
+						DebugLog.Info("Activity States loaded");	
+						ActivityStates = prevResult.ResultAs<List<ActivityState>>();
+						onCompleted(true);
                     })
                     .Catch((Exception e) =>
                     {
+						DebugLog.Error("Can't load activitues: {0}", e.Message);	
                         navigator.Reveal<AlertViewModel>(alert =>
-                                                         {
-                                                             alert.Title = "Unable to load activity information.";
-                                                             alert.Message = e.Message;
-                                                             alert.Error = e;
-                                                             alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
-                                                         });
+                        {
+                             alert.Title = "Unable to load activity information.";
+                             alert.Message = e.Message;
+                             alert.Error = e;
+                             alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
+						}).Start();
 
                     }).Finally(() =>
                     {
                         busyIndicator.Dispose();
-                    });
+					}).Start();
 
-                    return true;
-                });
+					onRevealed(true);
+				}).Start();
 			}
 			catch (Exception e)
 			{
@@ -122,7 +126,7 @@ namespace IntelliMedia
 					alert.Title = "Unable load activity information";
 					alert.Message = e.Message;
 					alert.Error = e;
-				});
+				}).Start();
 			}
 		}
 
@@ -134,31 +138,31 @@ namespace IntelliMedia
 				
 				DebugLog.Info("Started Activity {0}", activity.Name);
 
-                navigator.Reveal<ProgressIndicatorViewModel>().ThenAs<ProgressIndicatorViewModel>((ProgressIndicatorViewModel progressIndicatorViewModel) =>
-                {
+				navigator.Reveal<ProgressIndicatorViewModel>().Then((vm, onRevealed, onRevealError) =>
+				{
+					ProgressIndicatorViewModel progressIndicatorViewModel = vm.ResultAs<ProgressIndicatorViewModel>();
                     ProgressIndicatorViewModel.ProgressInfo busyIndicator = progressIndicatorViewModel.Begin("Starting...");
                     activityLauncher.Start(sessionState.Student, activity, false)
-                    .ThenAs<ViewModel>((ViewModel activityViewModel) =>
+					.Then((prevResult, onCompleted, onError) =>
                     {
-                        navigator.Transition(this, activityViewModel);
-                        return true;
+						navigator.Transition(this, prevResult.ResultAs<ActivityViewModel>());
+						onCompleted(true);
                     })
                     .Catch((Exception e) =>
-                           {
-                               navigator.Reveal<AlertViewModel>(alert =>
-                                                                {
-                                                                    alert.Title = "Unable to start activity";
-                                                                    alert.Message = e.Message;
-                                                                    alert.Error = e;
-                                                                    alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
-                                                                });
+                   {
+                       navigator.Reveal<AlertViewModel>(alert =>
+                        {
+                            alert.Title = "Unable to start activity";
+                            alert.Message = e.Message;
+                            alert.Error = e;
+                            alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
+						}).Start();
 
-                           }).Finally(() =>
-                           {
-                               busyIndicator.Dispose();
-                           });
-                    return true;
-                });
+                   }).Finally(() =>
+                   {
+                       busyIndicator.Dispose();
+					}).Start();
+				}).Start();
 			}
 			catch (Exception e)
 			{
@@ -167,7 +171,7 @@ namespace IntelliMedia
 					alert.Title = "Unable to start activity";
 					alert.Message = e.Message;
 					alert.Error = e;
-				});
+				}).Start();
 			}
 		}
 
@@ -189,7 +193,7 @@ namespace IntelliMedia
 					alert.Message = e.Message;
 					alert.Error = e;
 					alert.AlertDismissed += ((int index) => DebugLog.Info("Button {0} pressed", index));
-				});
+				}).Start();
 			}
 		}
 

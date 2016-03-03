@@ -43,40 +43,39 @@ namespace IntelliMedia
 			this.appSettings = appSettings;
 		}
 		
-		public Promise SignIn(string domain, string username, string password)
+		public AsyncTask SignIn(string domain, string username, string password)
 		{
-			Promise promise = new Promise();
-
-			try
+			return new AsyncTask((prevResult, onCompleted, onError) =>
 			{
-				Uri serverUri = new Uri(appSettings.ServerURI, UriKind.RelativeOrAbsolute);
-				Uri restUri = new Uri(serverUri, "rest/");
-
-				StudentRepository repo = new StudentRepository(restUri);
-				if (repo == null)
+				try
 				{
-					throw new Exception("StudentRepository is not initialized.");
+					Uri serverUri = new Uri(appSettings.ServerURI, UriKind.RelativeOrAbsolute);
+					Uri restUri = new Uri(serverUri, "rest/");
+
+					StudentRepository repo = new StudentRepository(restUri);
+					if (repo == null)
+					{
+						throw new Exception("StudentRepository is not initialized.");
+					}
+					
+					repo.SignIn(domain, username, password, (StudentRepository.Response response) =>
+					{
+						if (response.Success)
+						{
+							Token = Guid.NewGuid().ToString();
+							onCompleted(response.Item);
+						}
+						else
+						{
+							onError(new Exception(response.Error));
+						}
+					});                   
 				}
-				
-				repo.SignIn(domain, username, password, (StudentRepository.Response response) =>
+				catch (Exception e)
 				{
-					if (response.Success)
-					{
-						Token = Guid.NewGuid().ToString();
-						promise.Resolve(response.Item);
-					}
-					else
-					{
-						promise.Reject(new Exception(response.Error));
-					}
-				});                   
-			}
-			catch (Exception e)
-			{
-				promise.Reject(e);
-			}
-
-			return promise;
+					onError(e);
+				}
+			});
 		}
 		
 		public void SignOut(AuthenticateHandler callback)
