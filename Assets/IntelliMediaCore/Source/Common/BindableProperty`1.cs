@@ -45,7 +45,7 @@ namespace IntelliMedia
 			{
 				if (!object.Equals(_value, value))
 				{
-					T old = value;
+					T old = _value;
 					_value = value;
 					OnValueChanged(old, _value);
 				}
